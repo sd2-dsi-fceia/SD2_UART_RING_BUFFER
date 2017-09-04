@@ -83,7 +83,7 @@ void ringBuffer_deInit(void *rb)
 bool ringBuffer_putData(void *pRb, uint8_t data)
 {
     ringBuferData_struct *rb = pRb;
-    bool ret = false;
+    bool ret = true;
 
     rb->pBuf[rb->indexWrite] = data;
 
@@ -103,7 +103,7 @@ bool ringBuffer_putData(void *pRb, uint8_t data)
         rb->indexRead++;
         if (rb->indexRead >= rb->size)
             rb->indexRead = 0;
-        ret = true;
+        ret = false;
     }
 
     return ret;

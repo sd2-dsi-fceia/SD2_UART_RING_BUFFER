@@ -74,8 +74,8 @@ void ringBuffer_deInit(void *pRb);
  ** \param[inout] pRb puntero al buffer circular
  ** \param[in] data dato a colocar en el buffer
  **
- ** \return true si se estan pisando datos
- **         false si no se estan pisando datos
+ ** \return true si se pudo poner el dato correctamente
+ **         false si se puso y se piso un dato antiguo
  **/
 bool ringBuffer_putData(void *pRb, uint8_t data);
 
