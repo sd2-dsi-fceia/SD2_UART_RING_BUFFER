@@ -36,7 +36,6 @@
 
 #include "board.h"
 #include "board_rs485.h"
-#include "key.h"
 #include "MKL46Z4.h"
 #include "fsl_sim_hal.h"
 #include "fsl_lpsci_hal.h"
@@ -83,24 +82,6 @@ int main(void)
 
     while(1)
     {
-        if (key_getEvent(BOARD_SW_ID_1))
-            board_rs485_sendByte('E');
-
-        if (key_getEvent(BOARD_SW_ID_3))
-            board_rs485_sendByte('A');
-
-        if (board_rs485_isDataAvailable())
-        {
-            uint8_t dataRec;
-
-            dataRec = board_rs485_readByte();
-
-            if (dataRec == 'E')
-                board_ledSet(BOARD_LED_ID_ROJO, BOARD_LED_MSG_ON);
-
-            if (dataRec == 'A')
-                board_ledSet(BOARD_LED_ID_ROJO, BOARD_LED_MSG_OFF);
-        }
 
         if (timeDown1ms == 0)
         {
@@ -116,8 +97,6 @@ void PIT_IRQHandler(void)
 
     if (timeDown1ms)
         timeDown1ms--;
-
-    key_periodicTask1ms();
 }
 
 

@@ -44,7 +44,7 @@ typedef struct
     int32_t indexWrite;
     int32_t count;
     int32_t size;
-    uin8_t *pBuf;
+    uint8_t *pBuf;
 }ringBuferData_struct;
 
 /*==================[internal data declaration]==============================*/
@@ -88,7 +88,8 @@ bool ringBuffer_putData(void *pRb, uint8_t data)
     rb->pBuf[rb->indexWrite] = data;
 
     rb->indexWrite++;
-    rb->indexWrite = rb->indexWrite % rb->size;
+    if (rb->indexWrite >= rb->size)
+        rb->indexWrite = 0;
 
     if (rb->count < rb->size)
     {
@@ -100,7 +101,8 @@ bool ringBuffer_putData(void *pRb, uint8_t data)
          * haciendo que se pierda el dato má viejo y devuelve
          * true para indicar que se estan perdiendo datos */
         rb->indexRead++;
-        rb->indexRead = rb->indexRead % rb->size;
+        if (rb->indexRead >= rb->size)
+            rb->indexRead = 0;
         ret = true;
     }
 
@@ -117,7 +119,8 @@ bool ringBuffer_getData(void *pRb, uint8_t *data)
         *data = rb->pBuf[rb->indexRead];
 
         rb->indexRead++;
-        rb->indexRead = rb->indexRead % rb->size;
+        if (rb->indexRead >= rb->size)
+            rb->indexRead = 0;
         rb->count--;
     }
     else

@@ -36,6 +36,8 @@
 #define RING_BUFFER_H_
 
 /*==================[inclusions]=============================================*/
+#include "stdint.h"
+#include "stdbool.h"
 
 /*==================[cplusplus]==============================================*/
 #ifdef __cplusplus
