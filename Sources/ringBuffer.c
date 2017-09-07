@@ -73,6 +73,8 @@ void *ringBuffer_init(int32_t size)
     rb->indexWrite = 0;
     rb->count = 0;
     rb->size = size;
+
+    return rb;
 }
 
 void ringBuffer_deInit(void *rb)
@@ -98,7 +100,7 @@ bool ringBuffer_putData(void *pRb, uint8_t data)
     else
     {
         /* si el buffer está lleno incrementa en uno indexRead
-         * haciendo que se pierda el dato má viejo y devuelve
+         * haciendo que se pierda el dato más viejo y devuelve
          * true para indicar que se estan perdiendo datos */
         rb->indexRead++;
         if (rb->indexRead >= rb->size)
@@ -129,6 +131,20 @@ bool ringBuffer_getData(void *pRb, uint8_t *data)
     }
 
     return ret;
+}
+
+bool ringBuffer_isFull(void *pRb)
+{
+    ringBuferData_struct *rb = pRb;
+
+    return rb->count == rb->size;
+}
+
+bool ringBuffer_isEmpty(void *pRb)
+{
+    ringBuferData_struct *rb = pRb;
+
+    return rb->count == 0;
 }
 
 /*==================[end of file]============================================*/
