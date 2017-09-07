@@ -41,11 +41,15 @@
 #include "fsl_lpsci_hal.h"
 #include "fsl_clock_manager.h"
 #include "fsl_pit_hal.h"
+#include "fsl_port_hal.h"
+#include "ringBuffer.h"
 
 /*==================[macros and definitions]=================================*/
 
 /*==================[internal data declaration]==============================*/
 static int32_t timeDown1ms;
+static void* pRingBufferRx;
+static void* pRingBufferTx;
 
 /*==================[internal functions declaration]=========================*/
 
@@ -70,23 +74,125 @@ void PIT_Init(void)
     NVIC_EnableIRQ(PIT_IRQn);
 }
 
+void UART0_Init(void)
+{
+    PORT_HAL_SetMuxMode(PORTA, 1u, kPortMuxAlt2);
+    PORT_HAL_SetMuxMode(PORTA, 2u, kPortMuxAlt2);
+
+    // LPSCI: Low Power Serial Communication Interface
+
+    /* selecciona clock de PLLFLLSEL */
+    CLOCK_HAL_SetLpsciSrc(SIM, 0, kClockLpsciSrcPllFllSel);
+
+    /* habilita clock a la UART0 (Lpsci0) */
+    SIM_HAL_EnableClock(SIM, kSimClockGateLpsci0);
+
+    /* setea baudrate */
+    LPSCI_HAL_SetBaudRate(UART0, SystemCoreClock, 115200);
+
+    /* configura 8 bits de datos */
+    LPSCI_HAL_SetBitCountPerChar(UART0, kLpsci8BitsPerChar);
+
+    /* deshabilita paridad */
+    LPSCI_HAL_SetParityMode(UART0, kLpsciParityDisabled);
+
+    /* 1 bit de stop */
+    LPSCI_HAL_SetStopBitCount(UART0, kLpsciOneStopBit);
+
+    // Habilita interrupción de recepción
+    LPSCI_HAL_SetIntMode(UART0, kLpsciIntRxDataRegFull, true);
+
+    /* habilita transmisor y receptor */
+    LPSCI_HAL_EnableTransmitter(UART0);
+    LPSCI_HAL_EnableReceiver(UART0);
+
+    NVIC_ClearPendingIRQ(UART0_IRQn);
+    NVIC_EnableIRQ(UART0_IRQn);
+}
+
+/** \brief recibe datos por puerto serie accediendo al RB
+ **
+ ** \param[inout] pBuf buffer a donde guardar los datos
+ ** \param[in] size tamaño del buffer
+ ** \return cantidad de bytes recibidos
+ **/
+int32_t recDatos(uint8_t *pBuf, int32_t size)
+{
+    int32_t ret = 0;
+
+    /* entra sección de código crítico */
+    NVIC_DisableIRQ(UART0_IRQn);
+
+    while (!ringBuffer_isEmpty(pRingBufferRx) && ret < size)
+    {
+        ringBuffer_getData(pRingBufferRx, &pBuf[ret]);
+        ret++;
+    }
+
+    /* sale de sección de código crítico */
+    NVIC_EnableIRQ(UART0_IRQn);
+
+    return ret;
+}
+
+/** \brief envía datos por puerto serie accediendo al RB
+ **
+ ** \param[inout] pBuf buffer a donde estan los datos a enviar
+ ** \param[in] size tamaño del buffer
+ ** \return cantidad de bytes enviados
+ **/
+int32_t envDatos(uint8_t *pBuf, int32_t size)
+{
+    int32_t ret = 0;
+
+    /* entra sección de código crítico */
+    NVIC_DisableIRQ(UART0_IRQn);
+
+    /* si el buffer estaba vacío hay que habilitar la int TX */
+    if (ringBuffer_isEmpty(pRingBufferTx))
+        LPSCI_HAL_SetIntMode(UART0, kLpsciIntTxDataRegEmpty, true);
+
+    while (!ringBuffer_isFull(pRingBufferTx) && ret < size)
+    {
+        ringBuffer_putData(pRingBufferTx, pBuf[ret]);
+        ret++;
+    }
+
+    /* sale de sección de código crítico */
+    NVIC_EnableIRQ(UART0_IRQn);
+
+    return ret;
+}
+
 /*==================[external functions definition]==========================*/
 
 int main(void)
 {
-    board_init();
+    uint8_t buffer[20];
 
-    board_rs485_init();
+    board_init();
 
     PIT_Init();
 
+    UART0_Init();
+
+    pRingBufferRx = ringBuffer_init(5);
+
+    pRingBufferTx = ringBuffer_init(4);
+
     while(1)
     {
-
         if (timeDown1ms == 0)
         {
+            int32_t ret;
             timeDown1ms = 200;
+
             board_ledSet(BOARD_LED_ID_VERDE, BOARD_LED_MSG_TOGGLE);
+
+            ret = recDatos(buffer, sizeof(buffer));
+
+            if (ret)
+                envDatos(buffer, ret);
         }
     }
 }
@@ -98,6 +204,41 @@ void PIT_IRQHandler(void)
     if (timeDown1ms)
         timeDown1ms--;
 }
+
+void UART0_IRQHandler(void)
+{
+    uint8_t data;
+
+    if (LPSCI_HAL_GetStatusFlag(UART0, kLpsciRxDataRegFull) &&
+        LPSCI_HAL_GetIntMode(UART0, kLpsciIntRxDataRegFull))
+    {
+        /* obtiene dato recibido por puerto serie */
+        LPSCI_HAL_Getchar(UART0, &data);
+
+        /* pone dato en ring buffer */
+        ringBuffer_putData(pRingBufferRx, data);
+
+        LPSCI_HAL_ClearStatusFlag(UART0, kLpsciRxDataRegFull);
+    }
+
+    if (LPSCI_HAL_GetStatusFlag(UART0, kLpsciTxDataRegEmpty) &&
+        LPSCI_HAL_GetIntMode(UART0, kLpsciIntTxDataRegEmpty))
+    {
+        if (ringBuffer_getData(pRingBufferTx, &data))
+        {
+            /* envía dato extraído del RB al puerto serie */
+            LPSCI_HAL_Putchar(UART0, data);
+        }
+        else
+        {
+            /* si el RB está vacío deshabilita interrupción TX */
+            LPSCI_HAL_SetIntMode(UART0, kLpsciIntTxDataRegEmpty, false);
+        }
+
+        LPSCI_HAL_ClearStatusFlag(UART0, kLpsciTxDataRegEmpty);
+    }
+}
+
 
 
 /*==================[end of file]============================================*/
