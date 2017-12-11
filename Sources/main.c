@@ -35,7 +35,6 @@
 /*==================[inclusions]=============================================*/
 
 #include "board.h"
-#include "board_rs485.h"
 #include "MKL46Z4.h"
 #include "fsl_sim_hal.h"
 #include "fsl_lpsci_hal.h"
@@ -187,7 +186,7 @@ int main(void)
             int32_t ret;
             timeDown1ms = 200;
 
-            board_ledSet(BOARD_LED_ID_VERDE, BOARD_LED_MSG_TOGGLE);
+            board_setLed(BOARD_LED_ID_VERDE, BOARD_LED_MSG_TOGGLE);
 
             ret = recDatos(buffer, sizeof(buffer));
 

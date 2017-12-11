@@ -88,14 +88,14 @@ void board_init(void);
 /** \brief setea estado del led indicado
  **
  **/
-void board_ledSet(board_ledId_enum id, board_ledMsg_enum msg);
+void board_setLed(board_ledId_enum id, board_ledMsg_enum msg);
 
 /** \brief Devuelve estado del pulsador indicado
  **
  ** \return true: si el pulsdor est� apretado
  **         false: si el pulsador no est� apretado
  **/
-bool board_swGet(board_swId_enum id);
+bool board_getSw(board_swId_enum id);
 
 /*==================[cplusplus]==============================================*/
 #ifdef __cplusplus

@@ -77,7 +77,7 @@ void board_init(void)
     for (i = 0 ; i < BOARD_LED_ID_TOTAL ; i++)
     {
         PORT_HAL_SetMuxMode(board_gpioLeds[i].port, board_gpioLeds[i].pin, kPortMuxAsGpio);
-        board_ledSet(i, BOARD_LED_MSG_OFF);
+        board_setLed(i, BOARD_LED_MSG_OFF);
         GPIO_HAL_SetPinDir(board_gpioLeds[i].gpio, board_gpioLeds[i].pin, kGpioDigitalOutput);
     }
 
@@ -91,7 +91,7 @@ void board_init(void)
     }
 }
 
-void board_ledSet(board_ledId_enum id, board_ledMsg_enum msg)
+void board_setLed(board_ledId_enum id, board_ledMsg_enum msg)
 {
     switch (msg)
     {
@@ -112,7 +112,7 @@ void board_ledSet(board_ledId_enum id, board_ledMsg_enum msg)
     }
 }
 
-bool board_swGet(board_swId_enum id)
+bool board_getSw(board_swId_enum id)
 {
     return !GPIO_HAL_ReadPinInput(board_gpioSw[id].gpio, board_gpioSw[id].pin);
 }
